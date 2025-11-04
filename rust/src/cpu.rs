@@ -4,7 +4,6 @@ use std::process::Command;
 use std::time::Duration;
 use crate::utils::{*};
 use regex;
-use regex::Regex;
 
 /// Contains the average CPU usage and the discrete usage for each processor
 #[derive(Debug, Clone)]
@@ -61,7 +60,7 @@ pub struct CpuInfo {
 /// ```rust
 /// use sysutil;
 ///
-/// let mut cpu = sysutil::CPU::new();
+/// let mut cpu = sysutil::cpu::CPU::new();
 /// cpu.update();
 /// ```
 #[derive(Debug, Clone)]
@@ -101,7 +100,7 @@ impl CPU {
 /// Frequency data structure implements direct conversion for frequencies
 /// in various size orders
 /// ```rust
-/// use sysutil::cpuFrequency;
+/// use sysutil::cpu::cpuFrequency;
 /// let frequency = cpuFrequency().average;
 ///
 /// frequency.khz(); // returns the frequency in Kilo Hertz
@@ -283,7 +282,7 @@ fn cpuInfo() -> CpuInfo {
     let baseDir = path::Path::new("/sys/devices/system/cpu");
 
     let mut coreCount: usize = 0;
-    let mut dieCount: usize = 0;
+    let mut dies = Vec::<usize>::new();
 
     for processor in fs::read_dir(baseDir).unwrap() {
         let processorPath = processor.unwrap().path();
@@ -309,8 +308,8 @@ fn cpuInfo() -> CpuInfo {
                 match dieId.parse::<usize>() {
                     Err(_) => (),
                     Ok(uDieId) => {
-                        if uDieId > dieCount {
-                            dieCount = uDieId;
+                        if !dies.contains(&uDieId) {
+                            dies.push(uDieId);
                         }
                     }
                 }
@@ -318,10 +317,11 @@ fn cpuInfo() -> CpuInfo {
         }
     }
 
+    let dieCount = dies.len();
+
     if coreCount % 2 == 1 {
         coreCount += 1;
     }
-    dieCount += 1;
 
     let cpuInfoFile = readFile("/proc/cpuinfo");
     let threadCount = cpuInfoFile.matches("processor").count();
@@ -568,17 +568,28 @@ pub fn cacheLevels() -> HashMap<String, ByteSize> {
                 cacheLevels.insert(level, vec![(size, shared)]);
 
             } else {
-                if cacheLevels.get_mut(&level).unwrap().contains(&(size.clone(), shared.clone())) {
-                    let mut list = cacheLevels.get(&level).unwrap().clone();
-                    cacheLevels.remove(&level);
+                let mut savedCacheLevel = cacheLevels.get(&level).unwrap().clone();
 
-                    list.push((size, shared));
-                    cacheLevels.insert(level, list);
+                let mut found = false;
+
+                for savedLevel in &savedCacheLevel {
+                    let (savedSize, savedShared) = savedLevel;
+                    if savedShared == &shared {
+                        found = true;
+                    }
+                }
+
+                if !found {
+                    cacheLevels.remove(&level);
+                    savedCacheLevel.push((size, shared));
+
+                    cacheLevels.insert(level, savedCacheLevel);
                 }
             }
-
         }
     }
+
+    println!("{:?}", cacheLevels);
 
     let mut levels = HashMap::<String, ByteSize>::new();
     for level in cacheLevels.keys() {

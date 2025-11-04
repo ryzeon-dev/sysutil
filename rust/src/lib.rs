@@ -938,6 +938,8 @@ mod tests {
 
     #[test]
     fn test() {
+        // println!("{:?}", storage::nvmeDevices());
+
         /*println!("{:?}", cpuUsage());
         println!("RAM usage: {:?}", ramUsage());
 
@@ -977,7 +979,14 @@ mod tests {
         /*let j = exportJson();
         j.writeToFile("file.json");*/
 
-        println!("{:?}", cpu::cacheLevels());
+        // for i in cpu::cacheLevels() {
+        //     let (level, size) = i;
+        //
+        //     let (size, unit) = size.fitBase1024();
+        //     println!("{level} {} {}", size, unit.toString());
+        // }
+
+        println!("{:?}", network::networkInterfaces());
 
         assert_eq!(0_u8, 0_u8);
     }

@@ -408,19 +408,42 @@ pub fn networkInterfaces() -> Vec<NetworkInterface> {
     
     let virtualInterfaces = {
         let mut ifaces = Vec::<String>::new();
-        
-        for iface in fs::read_dir("/sys/devices/virtual/net").unwrap() {
-            ifaces.push(iface.unwrap().file_name().to_str().unwrap().to_string());
+
+        let virtualInterfaces = fs::read_dir("/sys/devices/virtual/net");
+        if !virtualInterfaces.is_err() {
+            for iface in virtualInterfaces.unwrap() {
+                if iface.is_err() {
+                    continue;
+                }
+
+                let mut interfaceEntry = iface.unwrap();
+
+                if interfaceEntry.path().is_dir() {
+                    ifaces.push(interfaceEntry.file_name().to_str().unwrap().to_string());
+                }
+            }
         }
-        
+
         ifaces
     };
 
-    for directory in fs::read_dir(baseDirectory).unwrap() {
-        let dir = directory.unwrap();
+    let interfacesEntries = fs::read_dir(baseDirectory);
+    if interfacesEntries.is_err() {
+        return Vec::new();
+    }
 
-        let name = dir.file_name().to_str().unwrap().to_string();
-        let path = dir.path().to_str().unwrap().to_string();
+    for directoryEntry in interfacesEntries.unwrap() {
+        if directoryEntry.is_err() {
+            continue;
+        }
+
+        let entry = directoryEntry.unwrap();
+        if !entry.path().is_dir() {
+            continue;
+        }
+
+        let name = entry.file_name().to_str().unwrap().to_string();
+        let path = entry.path().to_str().unwrap().to_string();
 
         let mac = fs::read_to_string(format!("{}/address", path)).unwrap().trim().to_string();
 

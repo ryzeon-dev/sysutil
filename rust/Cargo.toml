@@ -1,6 +1,6 @@
 [package]
 name = "sysutil"
-version = "0.7.1"
+version = "0.7.2"
 authors = ["ryzeon-dev"]
 edition = "2021"
 description = "Linux system utils library"
